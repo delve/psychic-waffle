@@ -9,6 +9,15 @@ import (
 	"github.com/EngoEngine/engo/common"
 )
 
+const (
+	KeyboardScrollSpeed = 400
+	EdgeScrollSpeed     = KeyboardScrollSpeed
+	EdgeWidth           = 20
+	ZoomSpeed           = -0.125
+	WorldWidth          = 400
+	WorldHeight         = 400
+)
+
 type myScene struct{}
 
 // Type uniquely defines your game type
@@ -23,20 +32,26 @@ func (*myScene) Preload() {
 func (*myScene) Setup(u engo.Updater) {
 	world, _ := u.(*ecs.World)
 	engo.Input.RegisterButton("AddCity", engo.KeyF1)
-
 	common.SetBackground(color.White)
 
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
+
+	world.AddSystem(common.NewKeyboardScroller(
+		KeyboardScrollSpeed, engo.DefaultHorizontalAxis,
+		engo.DefaultVerticalAxis))
+	world.AddSystem(&common.EdgeScroller{ScrollSpeed: EdgeScrollSpeed, EdgeMargin: EdgeWidth})
+	world.AddSystem(&common.MouseZoomer{ZoomSpeed: ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
 }
 
 func main() {
 	opts := engo.RunOptions{
-		Title:  "Hello World",
-		Width:  400,
-		Height: 400,
+		Title:          "Traffic Manager",
+		Width:          WorldWidth,
+		Height:         WorldHeight,
+		StandardInputs: true,
 	}
 	engo.Run(opts, &myScene{})
 }
