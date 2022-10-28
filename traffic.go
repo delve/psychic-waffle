@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	KeyboardScrollSpeed = 400
 	EdgeScrollSpeed     = KeyboardScrollSpeed
 	EdgeWidth           = 20
 	ZoomSpeed           = -0.125
-	WorldWidth          = 400
-	WorldHeight         = 400
+	WorldWidth          = 800
+	WorldHeight         = 800
+	KeyboardScrollSpeed = (WorldWidth * WorldHeight) / 600
 	// todo needs more intelligence
 	HUDHeight = WorldHeight / 4
 	HUDWidth  = WorldWidth / 4
@@ -47,6 +47,14 @@ func (*myScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
 
+	world.AddSystem(common.NewKeyboardScroller(
+		KeyboardScrollSpeed, engo.DefaultHorizontalAxis,
+		engo.DefaultVerticalAxis))
+	world.AddSystem(&common.EdgeScroller{ScrollSpeed: EdgeScrollSpeed, EdgeMargin: EdgeWidth})
+	world.AddSystem(&common.MouseZoomer{ZoomSpeed: ZoomSpeed})
+
+	world.AddSystem(&systems.CityBuildingSystem{})
+
 	hud := HUD{BasicEntity: ecs.NewBasic()}
 	hud.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{X: 0, Y: engo.WindowHeight() - HUDHeight},
@@ -65,14 +73,6 @@ func (*myScene) Setup(u engo.Updater) {
 	}
 	hud.RenderComponent.SetShader(common.HUDShader)
 	hud.RenderComponent.SetZIndex(1)
-
-	world.AddSystem(common.NewKeyboardScroller(
-		KeyboardScrollSpeed, engo.DefaultHorizontalAxis,
-		engo.DefaultVerticalAxis))
-	world.AddSystem(&common.EdgeScroller{ScrollSpeed: EdgeScrollSpeed, EdgeMargin: EdgeWidth})
-	world.AddSystem(&common.MouseZoomer{ZoomSpeed: ZoomSpeed})
-
-	world.AddSystem(&systems.CityBuildingSystem{})
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
