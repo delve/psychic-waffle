@@ -10,10 +10,10 @@ import (
 	"github.com/EngoEngine/engo/common"
 )
 
-type mouseTracker struct {
-	ecs.BasicEntity
-	common.MouseComponent
-}
+// type mouseTracker struct {
+// 	ecs.BasicEntity
+// 	common.MouseComponent
+// }
 
 // Text is an entity containing text printed to the screen
 type Text struct {
