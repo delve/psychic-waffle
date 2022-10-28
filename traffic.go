@@ -1,36 +1,29 @@
 package main
 
 import (
+	"bytes"
 	"image"
 	"image/color"
+	"traffic/globals"
 	"traffic/systems"
+
+	"golang.org/x/image/font/gofont/gosmallcaps"
 
 	"github.com/EngoEngine/ecs"
 	"github.com/EngoEngine/engo"
 	"github.com/EngoEngine/engo/common"
 )
 
-const (
-	EdgeScrollSpeed     = KeyboardScrollSpeed
-	EdgeWidth           = 20
-	ZoomSpeed           = -0.125
-	WorldWidth          = 800
-	WorldHeight         = 800
-	KeyboardScrollSpeed = (WorldWidth * WorldHeight) / 600
-	// todo needs more intelligence
-	HUDHeight = WorldHeight / 4
-	HUDWidth  = WorldWidth / 4
-	HUDZ      = 1000
-)
-
 type myScene struct{}
 
+// HUD defines a HUD entity
 type HUD struct {
 	ecs.BasicEntity
 	common.RenderComponent
 	common.SpaceComponent
 }
 
+// Tile defines a Tile entity
 type Tile struct {
 	ecs.BasicEntity
 	common.RenderComponent
@@ -43,6 +36,7 @@ func (*myScene) Type() string { return "myGame" }
 // Preload is called before loading any assets from the disk, to allow you to register/queue them
 func (*myScene) Preload() {
 	engo.Files.Load("textures/citySheet.png", "tilemap/TrafficMap.tmx")
+	engo.Files.LoadReaderData("go.ttf", bytes.NewReader(gosmallcaps.TTF))
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
@@ -55,18 +49,20 @@ func (*myScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.MouseSystem{})
 
 	world.AddSystem(common.NewKeyboardScroller(
-		KeyboardScrollSpeed, engo.DefaultHorizontalAxis,
+		globals.KeyboardScrollSpeed, engo.DefaultHorizontalAxis,
 		engo.DefaultVerticalAxis))
-	world.AddSystem(&common.EdgeScroller{ScrollSpeed: EdgeScrollSpeed, EdgeMargin: EdgeWidth})
-	world.AddSystem(&common.MouseZoomer{ZoomSpeed: ZoomSpeed})
+	world.AddSystem(&common.EdgeScroller{ScrollSpeed: globals.EdgeScrollSpeed, EdgeMargin: globals.EdgeWidth})
+	world.AddSystem(&common.MouseZoomer{ZoomSpeed: globals.ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
+	world.AddSystem(&systems.HUDTextSystem{})
+	world.AddSystem(&systems.MoneySystem{})
 
 	hud := HUD{BasicEntity: ecs.NewBasic()}
 	hud.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{X: 0, Y: engo.WindowHeight() - HUDHeight},
-		Width:    HUDWidth,
-		Height:   HUDHeight,
+		Position: engo.Point{X: 0, Y: engo.WindowHeight() - globals.HUDHeight},
+		Width:    globals.HUDWidth,
+		Height:   globals.HUDHeight,
 	}
 	hudImage := image.NewUniform(color.RGBA{205, 205, 205, 255})
 	hudNRGBA := common.ImageToNRGBA(hudImage, 200, 200)
@@ -74,12 +70,12 @@ func (*myScene) Setup(u engo.Updater) {
 	hudTexture := common.NewTextureSingle(hudImageObj)
 
 	hud.RenderComponent = common.RenderComponent{
+		Repeat:   common.Repeat,
 		Drawable: hudTexture,
 		Scale:    engo.Point{X: 1, Y: 1},
-		Repeat:   common.Repeat,
 	}
 	hud.RenderComponent.SetShader(common.HUDShader)
-	hud.RenderComponent.SetZIndex(HUDZ)
+	hud.RenderComponent.SetZIndex(globals.HUDZ)
 
 	resource, err := engo.Files.Resource("tilemap/TrafficMap.tmx")
 	if err != nil {
@@ -106,7 +102,10 @@ func (*myScene) Setup(u engo.Updater) {
 			}
 		}
 	}
+
 	common.CameraBounds = levelData.Bounds()
+
+	// add everything to the RenderSystem
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
@@ -125,8 +124,8 @@ func (*myScene) Setup(u engo.Updater) {
 func main() {
 	opts := engo.RunOptions{
 		Title:          "Traffic Manager",
-		Width:          WorldWidth,
-		Height:         WorldHeight,
+		Width:          globals.WorldWidth,
+		Height:         globals.WorldHeight,
 		StandardInputs: true,
 	}
 	engo.Run(opts, &myScene{})
