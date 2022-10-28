@@ -30,12 +30,18 @@ type HUD struct {
 	common.SpaceComponent
 }
 
+type Tile struct {
+	ecs.BasicEntity
+	common.RenderComponent
+	common.SpaceComponent
+}
+
 // Type uniquely defines your game type
 func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register/queue them
 func (*myScene) Preload() {
-	engo.Files.Load("textures/city.png")
+	engo.Files.Load("textures/city.png", "tilemap/TrafficMap.tmx")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
@@ -74,11 +80,44 @@ func (*myScene) Setup(u engo.Updater) {
 	hud.RenderComponent.SetShader(common.HUDShader)
 	hud.RenderComponent.SetZIndex(1)
 
+	resource, err := engo.Files.Resource("tilemap/TrafficMap.tmx")
+	if err != nil {
+		panic(err)
+	}
+	tmxResource := resource.(common.TMXResource)
+	levelData := tmxResource.Level
+
+	tiles := make([]*Tile, 0)
+	for _, tileLayer := range levelData.TileLayers {
+		for _, tileElement := range tileLayer.Tiles {
+			if tileElement.Image != nil {
+				tile := &Tile{BasicEntity: ecs.NewBasic()}
+				tile.RenderComponent = common.RenderComponent{
+					Drawable: tileElement.Image,
+					Scale:    engo.Point{X: 1, Y: 1},
+				}
+				tile.SpaceComponent = common.SpaceComponent{
+					Position: tileElement.Point,
+					Width:    0,
+					Height:   0,
+				}
+				tiles = append(tiles, tile)
+			}
+		}
+	}
+	common.CameraBounds = levelData.Bounds()
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
+			// add HUD to the RenderSystem
 			sys.Add(&hud.BasicEntity, &hud.RenderComponent, &hud.SpaceComponent)
+			// add tiles to the RenderSystem
+			for _, tile := range tiles {
+				sys.Add(&tile.BasicEntity, &tile.RenderComponent, &tile.SpaceComponent)
+			}
+
 		}
+
 	}
 }
 
