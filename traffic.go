@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image"
 	"image/color"
 	"traffic/systems"
 
@@ -16,9 +17,18 @@ const (
 	ZoomSpeed           = -0.125
 	WorldWidth          = 400
 	WorldHeight         = 400
+	// todo needs more intelligence
+	HUDHeight = WorldHeight / 4
+	HUDWidth  = WorldWidth / 4
 )
 
 type myScene struct{}
+
+type HUD struct {
+	ecs.BasicEntity
+	common.RenderComponent
+	common.SpaceComponent
+}
 
 // Type uniquely defines your game type
 func (*myScene) Type() string { return "myGame" }
@@ -37,6 +47,25 @@ func (*myScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
 
+	hud := HUD{BasicEntity: ecs.NewBasic()}
+	hud.SpaceComponent = common.SpaceComponent{
+		Position: engo.Point{X: 0, Y: engo.WindowHeight() - HUDHeight},
+		Width:    HUDWidth,
+		Height:   HUDHeight,
+	}
+	hudImage := image.NewUniform(color.RGBA{205, 205, 205, 255})
+	hudNRGBA := common.ImageToNRGBA(hudImage, 200, 200)
+	hudImageObj := common.NewImageObject(hudNRGBA)
+	hudTexture := common.NewTextureSingle(hudImageObj)
+
+	hud.RenderComponent = common.RenderComponent{
+		Drawable: hudTexture,
+		Scale:    engo.Point{X: 1, Y: 1},
+		Repeat:   common.Repeat,
+	}
+	hud.RenderComponent.SetShader(common.HUDShader)
+	hud.RenderComponent.SetZIndex(1)
+
 	world.AddSystem(common.NewKeyboardScroller(
 		KeyboardScrollSpeed, engo.DefaultHorizontalAxis,
 		engo.DefaultVerticalAxis))
@@ -44,6 +73,13 @@ func (*myScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.MouseZoomer{ZoomSpeed: ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
+
+	for _, system := range world.Systems() {
+		switch sys := system.(type) {
+		case *common.RenderSystem:
+			sys.Add(&hud.BasicEntity, &hud.RenderComponent, &hud.SpaceComponent)
+		}
+	}
 }
 
 func main() {
