@@ -20,6 +20,7 @@ const (
 	// todo needs more intelligence
 	HUDHeight = WorldHeight / 4
 	HUDWidth  = WorldWidth / 4
+	HUDZ      = 1000
 )
 
 type myScene struct{}
@@ -41,7 +42,7 @@ func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register/queue them
 func (*myScene) Preload() {
-	engo.Files.Load("textures/city.png", "tilemap/TrafficMap.tmx")
+	engo.Files.Load("textures/citySheet.png", "tilemap/TrafficMap.tmx")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
@@ -78,7 +79,7 @@ func (*myScene) Setup(u engo.Updater) {
 		Repeat:   common.Repeat,
 	}
 	hud.RenderComponent.SetShader(common.HUDShader)
-	hud.RenderComponent.SetZIndex(1)
+	hud.RenderComponent.SetZIndex(HUDZ)
 
 	resource, err := engo.Files.Resource("tilemap/TrafficMap.tmx")
 	if err != nil {
